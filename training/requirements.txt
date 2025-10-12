@@ -1,0 +1,9 @@
+curl_cffi
+hmmlearn
+numpy
+pandas
+scikit-learn
+TA-Lib
+boto3
+yfinance
+python-dotenv
