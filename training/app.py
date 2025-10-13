@@ -10,6 +10,7 @@ import logging
 import yfinance as yf
 from dotenv import load_dotenv
 from curl_cffi import requests
+from telegram import TelegramService
 
 load_dotenv()
 
@@ -20,6 +21,9 @@ logger.addHandler(logging.StreamHandler())
 s3 = boto3.client('s3')
 bucket_name = os.getenv('S3_BUCKET_NAME')
 session = requests.Session(impersonate="chrome")
+
+telegram = TelegramService(
+    bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""))
 
 if not bucket_name:
     raise ValueError("S3_BUCKET_NAME environment variable not set")
@@ -53,6 +57,8 @@ def update_nifty_data(df, metadata):
             metadata['last_date'] = today
         except Exception as e:
             logger.error(f"Error fetching data from Yahoo Finance: {e}")
+            telegram.send_error(
+                f"Error fetching data from Yahoo Finance: {e}")
     return df, metadata
 
 
@@ -74,6 +80,8 @@ def hyperparameter_tuning(X):
                 best_model = model
                 clusters_count = K
     logger.info(
+        f"Best model has {clusters_count} clusters with BIC: {best_bic}")
+    telegram.send_message(
         f"Best model has {clusters_count} clusters with BIC: {best_bic}")
     return best_model, clusters_count
 
@@ -132,13 +140,16 @@ def save_nifty_data(df, metadata):
 
 
 def handler(event, context):
+    logger.info("Starting model training process...")
+    telegram.send_message("Starting Nifty Regime Detection Model training...")
     df, metadata = get_nifty_data()
     df, metadata = update_nifty_data(df, metadata)
     save_nifty_data(df, metadata)
     X, scaler = feature_engineering(df)
     model, clusters_count = hyperparameter_tuning(X)
     save_model(model, scaler, clusters_count)
-#   model, clusters_count = hyperparameter_tuning(X)
+    telegram.send_success(
+        "Nifty Regime Detection Model training completed successfully!")
     return {
         'statusCode': 200,
         'body': 'Model training completed successfully!'

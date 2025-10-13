@@ -7,3 +7,4 @@ TA-Lib
 boto3
 yfinance
 python-dotenv
+requests
